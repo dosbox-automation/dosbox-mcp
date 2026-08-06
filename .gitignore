@@ -7,4 +7,5 @@ build/
 .pytest_cache/
 .ruff_cache/
 .sessions/
-.claude/
+.claude/*
+!.claude/skills/
