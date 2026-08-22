@@ -265,6 +265,58 @@ POST /api/v1/capture/video/stop
 Output is AVI with ZMBV codec. VLC plays it natively.
 
 
+## Audio capture
+
+Record the mixer output as a WAV file:
+
+```
+POST /api/v1/capture/audio/start                    # auto-numbered in capture dir
+POST /api/v1/capture/audio/start {"path": "/tmp/out.wav"}  # caller-specified path
+POST /api/v1/capture/audio/stop
+GET  /api/v1/capture/audio/status
+```
+
+The path parameter is validated against the system path denylist
+(writing to `/etc/`, `/bin/`, etc. is rejected). Omit it to use the
+default capture directory.
+
+In Lua:
+```lua
+dosbox.audio_capture_start()           -- auto-numbered
+dosbox.audio_capture_start("/tmp/out.wav")  -- specific path
+dosbox.audio_capture_stop()
+```
+
+Headless capture works with `SDL_AUDIODRIVER=dummy` - the mixer
+produces real PCM data even without audio hardware.
+
+
+## Mixer control
+
+Read and control the audio mixer:
+
+```
+GET  /api/v1/mixer                         # full state: master, mute, all channels
+PUT  /api/v1/mixer/volume {"left": 0.8, "right": 0.8}   # set master volume
+POST /api/v1/mixer/mute
+POST /api/v1/mixer/unmute
+PUT  /api/v1/mixer/channel/SB {"left": 0.5, "right": 0.5}  # set channel volume
+```
+
+Channel names come from the mixer itself (SB, GUS, CDAUDIO, SPKR,
+etc.). `GET /api/v1/mixer` lists all active channels with their names,
+user volumes, app volumes, enabled state, and sample rates.
+
+In Lua:
+```lua
+local info = dosbox.mixer_info()     -- table with master_volume, muted, channels
+dosbox.mixer_volume(0.8, 0.8)        -- set master
+dosbox.mixer_channel_volume("SB", 0.5, 0.5)  -- set channel
+dosbox.mixer_mute()
+dosbox.mixer_unmute()
+```
+
+
 ## Verifying the setup
 
 After starting the emulator and Claude Code with the bridge

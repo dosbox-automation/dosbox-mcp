@@ -92,6 +92,25 @@ These work whether or not an engine is connected.
 
 ## Media and recording
 
-- **video_capture_start** - start recording. `{}`
-- **video_capture_stop** - stop recording. `{}`
-- **video_capture_status** (read-only) - recording state. `{}`
+- **video_capture_start** - start ZMBV video recording.
+  `{}` or `{"mode": "rendered"}`
+- **video_capture_stop** - stop video recording. `{}`
+- **video_capture_status** (read-only) - video recording state. `{}`
+
+## Audio
+
+- **audio_capture_start** - start WAV audio capture.
+  `{}` or `{"path": "/tmp/out.wav"}`
+- **audio_capture_stop** - stop audio capture. `{}`
+- **audio_capture_status** (read-only) - audio capture state. `{}`
+
+## Mixer
+
+- **mixer_status** (read-only) - master volume, mute state, all
+  channels with volumes and sample rates. `{}`
+- **mixer_volume** - set master volume.
+  `{"left": 0.8, "right": 0.8}`
+- **mixer_mute** - mute master output. `{}`
+- **mixer_unmute** - unmute master output. `{}`
+- **mixer_channel_volume** - set a channel's user volume.
+  `{"channel": "SB", "left": 0.5, "right": 0.5}`
