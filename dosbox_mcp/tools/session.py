@@ -10,7 +10,10 @@ def register(server, client, add_tool, feature=None):
         name="dosbox_status",
         description=(
             "Machine state: what program is running, mount status, version. "
-            "One call answers 'what is the machine doing right now'."
+            "One call answers 'what is the machine doing right now'. While a "
+            "mount waits on an archive, status.archive says what the archive "
+            "helper does (activity identifying or materializing, archive, "
+            "bytes_done, bytes_total); the field is absent otherwise."
         ),
         read_only=True,
         schema={"type": "object", "properties": {}},

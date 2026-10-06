@@ -196,3 +196,33 @@ def test_script_run_sends_lua_as_text_not_json():
     assert ctype == "text/plain"
     # start is a plain POST with no body
     assert client.json_calls == [("/api/v1/script/start", None)]
+
+
+class _StatusClient:
+    def get(self, path, params=None, headers=None):
+        if path == "/api/v1/status":
+            return {"running": True, "archive": {
+                "activity": "materializing", "archive": "doom",
+                "bytes_done": 4096, "bytes_total": 12408292}}
+        return {}
+
+
+def _status_tool():
+    from dosbox_mcp.tools import session
+    tools = {}
+
+    def add_tool(name, description, schema, handler, read_only=False, **kwargs):
+        tools[name] = (description, handler)
+
+    session.register(None, _StatusClient(), add_tool)
+    return tools["dosbox_status"]
+
+
+def test_status_names_and_passes_the_archive_preparation():
+    import json
+    description, handler = _status_tool()
+    assert "status.archive" in description
+    out = json.loads(handler({})[0].text)
+    assert out["status"]["archive"] == {
+        "activity": "materializing", "archive": "doom",
+        "bytes_done": 4096, "bytes_total": 12408292}
