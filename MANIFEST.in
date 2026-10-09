@@ -1,3 +1,4 @@
+include CHANGELOG.md
 include PROTOCOL.md
 include THIRD_PARTY_LICENSES.txt
 recursive-include feelies *.md

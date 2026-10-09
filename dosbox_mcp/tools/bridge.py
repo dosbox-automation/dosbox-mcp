@@ -11,21 +11,13 @@ and connection errors it can meaningfully report.
 """
 
 import json
-from importlib import metadata
 
 import mcp.types as types
 
 from ..config import ToolProtectedKey, default_config_path, update_config_file
 from ..connection import NotConnected
 from ..lifecycle import LifecycleError
-from ..protocol import BRIDGE_PROTOCOL, KNOWN_ROUTE_PREFIXES
-
-
-def _bridge_version() -> str:
-    try:
-        return metadata.version("dosbox-mcp")
-    except metadata.PackageNotFoundError:
-        return "unknown"
+from ..protocol import BRIDGE_PROTOCOL, KNOWN_ROUTE_PREFIXES, bridge_version
 
 
 def _text(payload) -> list:
@@ -35,7 +27,7 @@ def _text(payload) -> list:
 
 
 def _version(args=None):
-    return _text({"version": _bridge_version(), "protocol": BRIDGE_PROTOCOL})
+    return _text({"version": bridge_version(), "protocol": BRIDGE_PROTOCOL})
 
 
 def _status(conn, manager, mode):
@@ -55,7 +47,7 @@ def _help(conn, manager, mode, get_tools):
         else f"not connected (target {status['base_url']})"
     )
     lines = [
-        f"dosbox-mcp {_bridge_version()} - protocol {BRIDGE_PROTOCOL}, "
+        f"dosbox-mcp {bridge_version()} - protocol {BRIDGE_PROTOCOL}, "
         f"mode {mode}",
         connection_line,
         "",

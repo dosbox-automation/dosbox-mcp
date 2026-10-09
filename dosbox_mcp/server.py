@@ -3,7 +3,9 @@
 #
 
 import asyncio
+import logging
 
+import jsonschema
 import mcp.server.stdio
 from mcp.server.lowlevel import Server
 import mcp.types as types
@@ -11,7 +13,10 @@ import mcp.types as types
 from .config import MODES, Config
 from .connection import Connection, guard
 from .lifecycle import InstanceManager
+from .protocol import bridge_version
 from .tools import bridge, session, screen, input as input_tools, memory, freeze, io, cpu, debug, media, mixer, script
+
+logger = logging.getLogger(__name__)
 
 # Groups whose non-read-only tools register under "interact" mode.
 # Everything else non-read-only (memory surgery, port IO, cpu control,
@@ -41,6 +46,13 @@ def _make_attach(conn):
     return attach
 
 
+def _tool_error(message: str) -> types.CallToolResult:
+    return types.CallToolResult(
+        content=[types.TextContent(type="text", text=message)],
+        is_error=True,
+    )
+
+
 def build_server(conn, mode: str = "full", manager=None):
     """Build the MCP server. `mode` is the operator's capability mode
     (observe / interact / full): tools outside the mode are not
@@ -50,13 +62,45 @@ def build_server(conn, mode: str = "full", manager=None):
     if manager is None:
         manager = InstanceManager(conn.config, attach=_make_attach(conn))
 
-    server = Server("dosbox-mcp")
     registry = {}
+    validators = {}
+
+    async def list_tools(_ctx, _params):
+        return types.ListToolsResult(tools=[tool for tool, _ in registry.values()])
+
+    # mcp 1.x wrapped tool calls in schema validation and turned exceptions
+    # into isError results; 2.x leaves both to the server.
+    async def call_tool(_ctx, params):
+        name = params.name
+        arguments = params.arguments or {}
+        if name not in registry:
+            return _tool_error(f"unknown tool: {name}")
+        _, handler = registry[name]
+        error = jsonschema.exceptions.best_match(
+            validators[name].iter_errors(arguments))
+        if error is not None:
+            return _tool_error(f"Input validation error: {error.message}")
+        try:
+            return types.CallToolResult(content=list(handler(arguments)))
+        except Exception as e:
+            logger.warning("tool %s failed: %s", name, e, exc_info=True)
+            return _tool_error(str(e))
+
+    server = Server("dosbox-mcp", version=bridge_version(),
+                    on_list_tools=list_tools, on_call_tool=call_tool)
 
     def add_tool(name, description, schema, handler, read_only=False,
                  feature=None, group="session", needs_connection=True):
         if not _mode_allows(mode, read_only, group):
             return
+        # Checked once here so a call can only fail validation, never on
+        # the schema itself.
+        validator_class = jsonschema.validators.validator_for(schema)
+        try:
+            validator_class.check_schema(schema)
+        except jsonschema.SchemaError as e:
+            raise ValueError(f"tool {name}: invalid input schema: {e.message}") from e
+        validators[name] = validator_class(schema)
         # Bridge-internal tools skip the connection guard: most of them
         # must work while disconnected - that is their point.
         wrapped = (guard(conn, handler, feature=feature)
@@ -98,17 +142,6 @@ def build_server(conn, mode: str = "full", manager=None):
     debug.register(server, conn, add_tool_for("debug"), feature="debugger")
     bridge.register(server, conn, add_tool_for("bridge"),
                     manager=manager, mode=mode, get_tools=get_tools)
-
-    @server.list_tools()
-    async def list_tools():
-        return [tool for tool, _ in registry.values()]
-
-    @server.call_tool()
-    async def call_tool(name, arguments):
-        if name not in registry:
-            raise ValueError(f"unknown tool: {name}")
-        _, handler = registry[name]
-        return handler(arguments or {})
 
     def _registered_tool_names():
         return set(registry.keys())

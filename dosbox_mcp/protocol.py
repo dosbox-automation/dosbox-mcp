@@ -12,6 +12,7 @@ implicit 1.0, because 1.0 is defined as the surface those releases ship.
 """
 
 import re
+from importlib import metadata
 
 # Highest protocol version this bridge implements.
 BRIDGE_PROTOCOL = "1.0"
@@ -83,3 +84,10 @@ def effective_version(info: dict, pin: str | None = None) -> tuple[int, int]:
             "not a dosbox-mcp protocol peer"
         )
     return negotiate(bridge, engine)
+
+
+def bridge_version() -> str:
+    try:
+        return metadata.version("dosbox-mcp")
+    except metadata.PackageNotFoundError:
+        return "unknown"

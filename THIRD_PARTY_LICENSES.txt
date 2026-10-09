@@ -9,6 +9,11 @@ Runtime dependencies, installed from PyPI:
                  License: BSD-3-Clause
                  Homepage: https://github.com/encode/httpx
 
+  jsonschema     JSON Schema validation for Python
+                 Copyright (c) 2013 Julian Berman
+                 License: MIT
+                 Homepage: https://github.com/python-jsonschema/jsonschema
+
   mcp            Model Context Protocol SDK
                  Copyright (c) Anthropic, PBC.
                  License: MIT
