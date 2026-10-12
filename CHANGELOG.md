@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 (2026-10-12)
+
+- The README walks through getting started, from the download to the
+  first prompt you give the agent. No code changes.
+
 ## 0.2.0 (2026-10-09)
 
 - Runs on the mcp 2.x SDK and requires it (mcp >= 2, < 3). Fixes the crash
