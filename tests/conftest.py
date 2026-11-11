@@ -25,3 +25,10 @@ def isolate_config(monkeypatch, tmp_path):
     ~/.config/dosbox-mcp/config.toml never leaks into test results."""
     monkeypatch.setenv("DOSBOX_MCP_CONFIG", str(tmp_path / "no_such_config.toml"))
     monkeypatch.delenv("DOSBOX_API_URL", raising=False)
+
+
+# stdio clients take the legacy handshake; the in-process default is the
+# 2026-07-28 era, which skips initialize and the JSON-RPC framing.
+@pytest.fixture(params=["legacy", "auto"])
+def wire_mode(request):
+    return request.param

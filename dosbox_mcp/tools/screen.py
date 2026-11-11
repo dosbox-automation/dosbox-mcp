@@ -21,11 +21,22 @@ def register(server, client, add_tool, feature=None):
     add_tool(
         name="screen_capture",
         description=(
-            "Capture the current screen as a PNG image. Works in all video modes."
+            "Capture the current screen as a PNG image. Works in all video modes. "
+            "mode raw (default): the video adapter's frame at its own size; "
+            "rendered: the window's image after shader and scaling."
         ),
         read_only=True,
-        schema={"type": "object", "properties": {}},
-        handler=lambda args: _screen_capture(client),
+        schema={
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "type": "string",
+                    "enum": ["raw", "rendered"],
+                    "description": "raw (default) or rendered",
+                },
+            },
+        },
+        handler=lambda args: _screen_capture(client, args),
     )
 
     add_tool(
@@ -43,9 +54,12 @@ def _screen_text(client):
     return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
-def _screen_capture(client):
+def _screen_capture(client, args):
     import mcp.types as types
-    data = client.get("/api/v1/video/frame", params={"format": "png"})
+    params = {"format": "png"}
+    if args.get("mode"):
+        params["mode"] = args["mode"]
+    data = client.get("/api/v1/video/frame", params=params)
     encoded = base64.b64encode(data).decode("ascii")
     return [types.ImageContent(type="image", data=encoded, mimeType="image/png")]
 

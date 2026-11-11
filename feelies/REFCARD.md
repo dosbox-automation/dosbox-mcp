@@ -39,7 +39,8 @@ These work whether or not an engine is connected.
 - **session_info** (read-only) - base URL and token location for
   driving the REST API directly (never the token value). `{}`
 - **screen_text** (read-only) - read the text-mode screen. `{}`
-- **screen_capture** (read-only) - capture a frame as an image. `{}`
+- **screen_capture** (read-only) - capture a frame as an image: the
+  adapter's frame, or what the window shows. `{}` or `{"mode": "rendered"}`
 - **screen_info** (read-only) - current video mode and geometry. `{}`
 
 ## Input (feature: input)
@@ -94,8 +95,13 @@ These work whether or not an engine is connected.
 
 - **video_capture_start** - start ZMBV video recording.
   `{}` or `{"mode": "rendered"}`
-- **video_capture_stop** - stop video recording. `{}`
+- **video_capture_stop** - stop video recording; reports its mode and why
+  it ended. `{}`
 - **video_capture_status** (read-only) - video recording state. `{}`
+- **video_capture_compression** (read-only) - zlib levels for raw and
+  rendered recordings. `{}`
+- **video_capture_compression_set** - set them, 0 to 9, for the next
+  recording. `{"rendered": 5}`
 
 ## Audio
 
