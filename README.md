@@ -1,5 +1,7 @@
 # dosbox-mcp
 
+<!-- mcp-name: io.github.dosbox-automation/dosbox-mcp -->
+
 MCP server for [dosbox-automation](https://dosbox-automation.org):
 drive a DOS machine from an AI agent.
 
@@ -157,8 +159,9 @@ sheet, and a tech-support page.
 
 ## License
 
-GPL-2.0-or-later. See LICENSE. The protocol specification
-(PROTOCOL.md) is licensed CC-BY-SA-4.0.
+GPL-2.0-or-later: the license text is in LICENSE, which parts carry which
+license in NOTICE. The protocol specification (PROTOCOL.md) is licensed
+CC-BY-SA-4.0.
 
 ---
 This project is developed with tooled assistance, but tested, reviewed and

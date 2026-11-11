@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.dosbox-automation/dosbox-mcp",
+  "title": "dosbox-mcp",
+  "description": "Drive a DOS machine in dosbox-automation: keys, screen, recordings, Lua, memory.",
+  "version": "0.2.2",
+  "websiteUrl": "https://dosbox-automation.org",
+  "repository": {
+    "url": "https://github.com/dosbox-automation/dosbox-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "dosbox-mcp",
+      "version": "0.2.2",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
