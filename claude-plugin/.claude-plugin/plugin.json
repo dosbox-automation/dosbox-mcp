@@ -9,6 +9,8 @@
   },
   "homepage": "https://dosbox-automation.org",
   "repository": "https://github.com/dosbox-automation/dosbox-mcp",
+  "documentationUrl": "https://github.com/dosbox-automation/dosbox-mcp/tree/main/claude-plugin#readme",
+  "supportUrl": "https://github.com/dosbox-automation/dosbox-mcp/issues",
   "license": "GPL-2.0-or-later",
   "keywords": [
     "dos", "msdos", "dosbox", "emulator", "retro", "retrogaming", "games",
