@@ -101,11 +101,18 @@ def _validate_bool(key: str):
     return check
 
 
+def _expanded_path(key: str, value: str) -> Path:
+    try:
+        return Path(value).expanduser()
+    except RuntimeError as e:
+        raise ValueError(f"{key}: cannot expand {value!r}: {e}") from e
+
+
 def _validate_path(key: str):
     def check(value: object) -> Path:
         _require(isinstance(value, str) and value != "",
                  f"{key} must be a non-empty string path, got {value!r}")
-        return Path(value)
+        return _expanded_path(key, value)
     return check
 
 
@@ -155,7 +162,8 @@ class Config:
         base = os.environ.get("DOSBOX_API_URL") or f"http://127.0.0.1:{port}"
 
         env_token_file = os.environ.get("DOSBOX_TOKEN_FILE")
-        token_file = Path(env_token_file) if env_token_file else data.get("token_file")
+        token_file = (_expanded_path("DOSBOX_TOKEN_FILE", env_token_file) if env_token_file
+                      else data.get("token_file"))
 
         cfg = cls(
             base_url=validate_base_url(base),

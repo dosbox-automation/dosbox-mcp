@@ -59,7 +59,11 @@ def _cmd_setup(args) -> int:
         changes["headless"] = args.headless
 
     if not changes:
-        config = Config.load()
+        try:
+            config = Config.load()
+        except ValueError as e:
+            print(str(e), file=sys.stderr)
+            return 2
         current = {
             "config_file": str(path),
             "binary": str(config.binary) if config.binary else None,

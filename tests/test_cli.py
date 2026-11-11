@@ -43,6 +43,11 @@ class TestSetup:
         assert "port" in out
         assert "8386" in out
 
+    def test_no_args_reports_a_bad_config(self, config_path, capsys):
+        config_path.write_text("port = = 1\n", encoding="utf-8")
+        assert cli.main(["setup"]) == 2
+        assert "malformed" in capsys.readouterr().err
+
     def test_bad_value_fails_loudly(self, config_path, capsys):
         assert cli.main(["setup", "--port", "99999"]) == 2
         assert "range" in capsys.readouterr().err

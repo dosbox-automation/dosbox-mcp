@@ -2,24 +2,18 @@
 # License: GPL-2.0-or-later. Contact: dosbox-mcp@trinity2k.net
 #
 
-import asyncio
+import shutil
 import types
 
 import pytest
 
-from dosbox_mcp.connection import Connection
-from dosbox_mcp.config import Config
 from dosbox_mcp.server import build_server
 from dosbox_mcp.tools.memory import _mem_read, _mem_write
-
-
-def _make_conn():
-    config = Config(base_url="http://127.0.0.1:8386", token=None)
-    return Connection(config)
+from tests.wire import make_conn, over_the_wire, wire_server
 
 
 def _build(mode="full"):
-    return build_server(_make_conn(), mode=mode)
+    return build_server(make_conn(), mode=mode)
 
 
 def test_always_on_tools_present():
@@ -146,6 +140,7 @@ def test_session_info_never_reveals_the_token_value(monkeypatch, tmp_path):
 
     class _FakeConn:
         base_url = "http://127.0.0.1:8386"
+        config = types.SimpleNamespace(token_file=None)
 
     result = _session_info(_FakeConn())
     import json as _json
@@ -159,17 +154,60 @@ def test_session_info_without_token(monkeypatch, tmp_path):
     from dosbox_mcp.tools.session import _session_info
 
     monkeypatch.delenv("DOSBOX_API_TOKEN", raising=False)
-    # Point the token file lookup at an empty directory
-    monkeypatch.setenv("DOSBOX_TOKEN_FILE", str(tmp_path / "no_token"))
 
     class _FakeConn:
         base_url = "http://127.0.0.1:8386"
+        config = types.SimpleNamespace(token_file=tmp_path / "no_token")
 
     result = _session_info(_FakeConn())
     import json as _json
     info = _json.loads(result[0].text)
     assert info["token"] == "absent"
     assert "note" in info
+
+
+def test_session_info_reads_the_configured_token_file(monkeypatch, tmp_path):
+    # Windows and macOS keep the token outside ~/.config: DOSBOX_TOKEN_FILE or
+    # token_file in config.toml point at it, and session_info must follow them.
+    from dosbox_mcp.tools.session import _session_info
+
+    monkeypatch.delenv("DOSBOX_API_TOKEN", raising=False)
+    token_file = tmp_path / "elsewhere" / "api_token"
+    token_file.parent.mkdir()
+    token_file.write_text("b" * 64, encoding="utf-8")
+
+    class _FakeConn:
+        base_url = "http://127.0.0.1:8386"
+        config = types.SimpleNamespace(token_file=token_file)
+
+    import json as _json
+    info = _json.loads(_session_info(_FakeConn())[0].text)
+    assert info["token"] == "present"
+    assert info["token_file"] == str(token_file)
+    assert str(token_file) in info["example"]
+    assert "b" * 64 not in _json.dumps(info)
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="runs the example in bash")
+def test_session_info_example_quotes_a_path_with_spaces(monkeypatch, tmp_path):
+    import subprocess
+
+    from dosbox_mcp.tools.session import _session_info
+
+    monkeypatch.delenv("DOSBOX_API_TOKEN", raising=False)
+    token_file = tmp_path / "Application Support" / "it's here" / "api_token"
+    token_file.parent.mkdir(parents=True)
+    token_file.write_text("c" * 64, encoding="utf-8")
+
+    class _FakeConn:
+        base_url = "http://127.0.0.1:8386"
+        config = types.SimpleNamespace(token_file=token_file)
+
+    import json as _json
+    example = _json.loads(_session_info(_FakeConn())[0].text)["example"]
+    header = subprocess.run(["bash", "-c", "curl() { printf %s \"$2\"; }; " + example],
+                            capture_output=True, text=True, check=True).stdout
+    assert header == "Authorization: Bearer " + "c" * 64
 
 
 def test_script_run_sends_lua_as_text_not_json():
@@ -239,40 +277,6 @@ def test_status_names_and_passes_the_archive_preparation():
 # ---------------------------------------------------------------------------
 
 
-class _FakeManager:
-    running = False
-    pid = None
-
-    def __init__(self, logs_error=None):
-        self._logs_error = logs_error
-
-    def logs(self, n):
-        if self._logs_error:
-            raise self._logs_error
-        return ["line one", "line two"]
-
-
-def _over_the_wire(server, request, mode):
-    from mcp import Client
-
-    async def run():
-        async with Client(server, mode=mode) as client:
-            return await request(client)
-    return asyncio.run(run())
-
-
-def _wire_server(mode="full", logs_error=None):
-    return build_server(_make_conn(), mode=mode,
-                        manager=_FakeManager(logs_error=logs_error))
-
-
-# stdio clients take the legacy handshake; the in-process default is the
-# 2026-07-28 era, which skips initialize and the JSON-RPC framing.
-@pytest.fixture(params=["legacy", "auto"])
-def wire_mode(request):
-    return request.param
-
-
 def _inject_tool(monkeypatch, schema, handler):
     def register(server, conn, add):
         add(name="injected", description="Injected.", schema=schema,
@@ -282,13 +286,13 @@ def _inject_tool(monkeypatch, schema, handler):
 
 
 def test_tools_list_serves_exactly_the_registered_tools(wire_mode):
-    server = _wire_server(mode="observe")
-    result = _over_the_wire(server, lambda c: c.list_tools(), wire_mode)
+    server = wire_server(mode="observe")
+    result = over_the_wire(server, lambda c: c.list_tools(), wire_mode)
     assert {t.name for t in result.tools} == server.registered_tool_names()
 
 
 def test_tools_call_returns_the_handler_content(wire_mode):
-    result = _over_the_wire(_wire_server(),
+    result = over_the_wire(wire_server(),
                             lambda c: c.call_tool("bridge_logs", {"n": 2}),
                             wire_mode)
     assert result.is_error is False
@@ -296,15 +300,15 @@ def test_tools_call_returns_the_handler_content(wire_mode):
 
 
 def test_tools_call_without_arguments_reaches_the_handler(wire_mode):
-    result = _over_the_wire(_wire_server(),
+    result = over_the_wire(wire_server(),
                             lambda c: c.call_tool("bridge_logs"), wire_mode)
     assert result.is_error is False
     assert "line one\nline two" in result.content[0].text
 
 
 def test_tools_call_rejects_arguments_that_break_the_schema(wire_mode):
-    server = _wire_server(logs_error=AssertionError("handler reached"))
-    result = _over_the_wire(server,
+    server = wire_server(logs_error=AssertionError("handler reached"))
+    result = over_the_wire(server,
                             lambda c: c.call_tool("bridge_logs", {"n": "ten"}),
                             wire_mode)
     assert result.is_error is True
@@ -312,8 +316,8 @@ def test_tools_call_rejects_arguments_that_break_the_schema(wire_mode):
 
 
 def test_tools_call_reports_a_failing_handler_as_a_tool_error(wire_mode):
-    server = _wire_server(logs_error=RuntimeError("pipe closed"))
-    result = _over_the_wire(server, lambda c: c.call_tool("bridge_logs", {}),
+    server = wire_server(logs_error=RuntimeError("pipe closed"))
+    result = over_the_wire(server, lambda c: c.call_tool("bridge_logs", {}),
                             wire_mode)
     assert result.is_error is True
     assert result.content[0].text == "pipe closed"
@@ -323,13 +327,13 @@ def test_tools_call_reports_a_malformed_handler_result_as_a_tool_error(
         monkeypatch, wire_mode):
     _inject_tool(monkeypatch, {"type": "object", "properties": {}},
                  lambda args: ["not a content block"])
-    result = _over_the_wire(_wire_server(),
+    result = over_the_wire(wire_server(),
                             lambda c: c.call_tool("injected", {}), wire_mode)
     assert result.is_error is True
 
 
 def test_tools_call_reports_an_unknown_tool_as_a_tool_error(wire_mode):
-    result = _over_the_wire(_wire_server(),
+    result = over_the_wire(wire_server(),
                             lambda c: c.call_tool("no_such_tool", {}),
                             wire_mode)
     assert result.is_error is True
@@ -337,7 +341,7 @@ def test_tools_call_reports_an_unknown_tool_as_a_tool_error(wire_mode):
 
 
 def test_tools_call_cannot_reach_a_tool_outside_the_mode(wire_mode):
-    result = _over_the_wire(_wire_server(mode="observe"),
+    result = over_the_wire(wire_server(mode="observe"),
                             lambda c: c.call_tool("mem_write", {"offset": 0, "data": "AA=="}),
                             wire_mode)
     assert result.is_error is True
@@ -347,7 +351,7 @@ def test_tools_call_cannot_reach_a_tool_outside_the_mode(wire_mode):
 def test_build_refuses_a_tool_with_an_invalid_schema(monkeypatch):
     _inject_tool(monkeypatch, {"type": "integer!"}, lambda args: [])
     with pytest.raises(ValueError, match="injected"):
-        _wire_server()
+        wire_server()
 
 
 def test_server_reports_its_own_version(wire_mode):
@@ -355,5 +359,5 @@ def test_server_reports_its_own_version(wire_mode):
 
     async def server_info(client):
         return client.server_info
-    info = _over_the_wire(_wire_server(), server_info, wire_mode)
+    info = over_the_wire(wire_server(), server_info, wire_mode)
     assert info.version == version("dosbox-mcp")

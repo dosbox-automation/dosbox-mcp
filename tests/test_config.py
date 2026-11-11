@@ -2,6 +2,8 @@
 # License: GPL-2.0-or-later. Contact: dosbox-mcp@trinity2k.net
 #
 
+import os
+
 import pytest
 
 from dosbox_mcp.config import (
@@ -66,6 +68,40 @@ class TestConfigLoad:
         assert cfg.protocol == "1.0"
         assert cfg.mode == "observe"
         assert cfg.token_file == tmp_path / "tok"
+
+    def test_toml_paths_expand_the_home_folder(self, tmp_path, monkeypatch):
+        # The config template shows token_file starting with ~.
+        toml = tmp_path / "config.toml"
+        toml.write_text('token_file = "~/emulator/api_token"\n'
+                        'binary = "~/bin/dosbox-automation"\n', encoding="utf-8")
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        monkeypatch.setenv("DOSBOX_MCP_CONFIG", str(toml))
+        monkeypatch.delenv("DOSBOX_TOKEN_FILE", raising=False)
+        cfg = Config.load()
+        assert cfg.token_file == tmp_path / "emulator" / "api_token"
+        assert cfg.binary == tmp_path / "bin" / "dosbox-automation"
+
+    @pytest.mark.skipif(os.name == "nt", reason="Windows maps ~user to a profile path without checking it")
+    def test_an_unknown_home_folder_is_a_config_error(self, tmp_path, monkeypatch):
+        toml = tmp_path / "config.toml"
+        toml.write_text('token_file = "~nosuchuser_zq/api_token"\n', encoding="utf-8")
+        monkeypatch.setenv("DOSBOX_MCP_CONFIG", str(toml))
+        monkeypatch.delenv("DOSBOX_TOKEN_FILE", raising=False)
+        with pytest.raises(ValueError, match="token_file"):
+            Config.load()
+
+    def test_env_token_file_expands_the_home_folder(self, tmp_path, monkeypatch):
+        # An MCP client's JSON env block reaches the bridge without a shell.
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        monkeypatch.setenv("DOSBOX_MCP_CONFIG", str(tmp_path / "none.toml"))
+        monkeypatch.setenv("DOSBOX_TOKEN_FILE", "~/emulator/api_token")
+        assert Config.load().token_file == tmp_path / "emulator" / "api_token"
+        if os.name != "nt":
+            monkeypatch.setenv("DOSBOX_TOKEN_FILE", "~nosuchuser_zq/api_token")
+            with pytest.raises(ValueError, match="DOSBOX_TOKEN_FILE"):
+                Config.load()
 
     def test_env_url_overrides_toml_port(self, tmp_path, monkeypatch):
         toml = tmp_path / "config.toml"

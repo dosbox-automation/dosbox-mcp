@@ -181,6 +181,9 @@ class Connection:
     def post(self, path, **kwargs):
         return self.call("post", path, **kwargs)
 
+    def post_text(self, path, text, **kwargs):
+        return self.call("post_text", path, text=text, **kwargs)
+
     def put(self, path, **kwargs):
         return self.call("put", path, **kwargs)
 

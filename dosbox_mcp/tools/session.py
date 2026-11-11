@@ -3,6 +3,7 @@
 #
 
 import json
+import shlex
 
 
 def register(server, client, add_tool, feature=None):
@@ -65,8 +66,9 @@ def _session_info(client):
     from dosbox_mcp.config import default_token_path, read_token
 
     base_url = client.base_url
-    token = read_token()
-    token_path = default_token_path()
+    configured = client.config.token_file
+    token = read_token(configured)
+    token_path = configured if configured is not None else default_token_path()
 
     # The token value never enters the transcript (design rule,
     # self-audit 2026-07-17). The curl example reads it from the file
@@ -75,7 +77,7 @@ def _session_info(client):
     if token:
         info["token"] = "present"  # nosec B105 - status word, not a secret
         info["example"] = (
-            f'curl -H "Authorization: Bearer $(cat {token_path})" '
+            f'curl -H "Authorization: Bearer $(cat {shlex.quote(str(token_path))})" '
             f"{base_url}/api/v1/status"
         )
     else:

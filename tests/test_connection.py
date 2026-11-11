@@ -204,3 +204,22 @@ class TestStatus:
         conn = _connectable({"features": {}, "mcp_protocol": "1.0"})
         conn.ensure_connected()
         assert TOKEN not in repr(conn.status())
+
+
+def test_script_run_loads_the_source_through_a_real_connection():
+    from dosbox_mcp.tools.script import _script_run
+
+    seen = []
+
+    def engine(request):
+        seen.append((request.method, request.url.path,
+                     request.headers.get("content-type"), request.content))
+        return httpx.Response(200, json={"status": "ok"})
+
+    conn = _make_conn(token=TOKEN, features={})
+    conn._client = DosboxClient("http://127.0.0.1:8386", TOKEN,
+                                transport=httpx.MockTransport(engine))
+    _script_run(conn, {"script": "dosbox.output.v = 1"})
+    assert seen[0][:3] == ("POST", "/api/v1/script/load", "text/plain")
+    assert seen[0][3] == b"dosbox.output.v = 1"
+    assert seen[1][:2] == ("POST", "/api/v1/script/start")
