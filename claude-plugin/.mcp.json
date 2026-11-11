@@ -2,7 +2,11 @@
   "mcpServers": {
     "dosbox": {
       "command": "uvx",
-      "args": ["dosbox-mcp==0.2.3"]
+      "args": [
+        "--from",
+        "${CLAUDE_PLUGIN_ROOT}/vendor/dosbox_mcp-0.2.3-py3-none-any.whl",
+        "dosbox-mcp"
+      ]
     }
   }
 }

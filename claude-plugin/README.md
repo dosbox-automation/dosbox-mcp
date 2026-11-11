@@ -27,7 +27,9 @@ local servers.
   This plugin does not bring it; get it from the
   [releases page](https://github.com/dosbox-automation/dosbox-automation/releases).
 - **uv** must be on your PATH, because the plugin starts the bridge with
-  `uvx dosbox-mcp==0.2.3`.
+  `uvx`. The bridge itself comes with the plugin, in
+  `vendor/dosbox_mcp-0.2.3-py3-none-any.whl`, the same file as dosbox-mcp
+  0.2.3 on PyPI.
 - The emulator's primary config needs these lines in its `[webserver]`
   section:
 
@@ -59,10 +61,13 @@ memory. The skill tells Claude which tools to use and in what order.
 
 ## What it does on your machine
 
-- **Network:** The first time the plugin starts, `uvx` downloads
-  `dosbox-mcp` 0.2.3 and its Python dependencies from PyPI. If it finds no
-  Python 3.11 or newer, it downloads an interpreter as well. After that the
-  bridge talks only to the emulator, on loopback addresses.
+- **Network:** When the plugin starts the bridge, `uvx` installs it from the
+  wheel in the plugin's `vendor/` folder and checks PyPI for the bridge's
+  Python dependencies; the first start downloads them, later starts use uv's
+  cache. If `uvx` finds no Python 3.11 or newer, it downloads an interpreter
+  as well. The `setup` command above, which you run yourself, fetches the
+  same dosbox-mcp 0.2.3 from PyPI. The bridge process itself talks only to
+  the emulator, on loopback addresses.
 - **Files it reads:** The bridge reads the emulator's API token file and its
   own config file; `uvx dosbox-mcp==0.2.3 setup` without options prints
   where the config file is. The bridge uses the token file only when it
