@@ -8,6 +8,7 @@ import pytest
 
 from dosbox_mcp.client import EngineBusy
 from dosbox_mcp.tools.media import (
+    _audio_capture_start,
     _capture_start,
     _capture_stop,
     _compression_get,
@@ -130,6 +131,29 @@ def test_a_stop_answered_503_without_busy_still_reads_the_reason():
                          stop_error=RuntimeError("503: Service unavailable"))
     with pytest.raises(RuntimeError, match="last_stop_reason: clean"):
         _capture_stop(client, {})
+
+
+def test_audio_start_offers_no_host_path():
+    # The engine writes a given path wherever the client says and truncates
+    # what is there; recordings from an agent go to the capture folder.
+    schema = _schema("audio_capture_start")
+    assert "path" not in schema.get("properties", {})
+    assert schema.get("additionalProperties") is False
+
+
+def test_audio_start_with_a_path_is_refused_before_the_engine(wire_mode):
+    result = over_the_wire(
+        wire_server(),
+        lambda c: c.call_tool("audio_capture_start", {"path": "/home/x/.bashrc"}),
+        wire_mode)
+    assert result.is_error is True
+    assert result.content[0].text.startswith("Input validation error")
+
+
+def test_audio_start_never_sends_a_path():
+    client = _FakeClient()
+    _audio_capture_start(client, {"path": "/home/x/.bashrc"})
+    assert client.calls == [("post", "/api/v1/capture/audio/start", None)]
 
 
 def test_screen_capture_defaults_to_the_raw_frame():

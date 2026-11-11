@@ -166,6 +166,23 @@ def test_session_info_without_token(monkeypatch, tmp_path):
     assert "note" in info
 
 
+def test_session_info_names_a_file_that_holds_no_token(monkeypatch, tmp_path):
+    from dosbox_mcp.tools.session import _session_info
+
+    monkeypatch.delenv("DOSBOX_API_TOKEN", raising=False)
+    token_file = tmp_path / "api_token"
+    token_file.write_text("not a token", encoding="utf-8")
+
+    class _FakeConn:
+        base_url = "http://127.0.0.1:8386"
+        config = types.SimpleNamespace(token_file=token_file)
+
+    import json as _json
+    info = _json.loads(_session_info(_FakeConn())[0].text)
+    assert info["token"] == "absent"
+    assert "holds no API token" in info["note"]
+
+
 def test_session_info_reads_the_configured_token_file(monkeypatch, tmp_path):
     # Windows and macOS keep the token outside ~/.config: DOSBOX_TOKEN_FILE or
     # token_file in config.toml point at it, and session_info must follow them.

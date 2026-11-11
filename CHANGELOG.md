@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.3 (2026-11-11)
+
+- `bridge_setup` changes only headless and protocol.
+- The bridge uses a token file only when it holds 64 hex digits.
+- `audio_capture_start` takes no path; its recordings go to the
+  capture folder.
+- claude-plugin/ holds a plugin package for Claude.
+
 ## 0.2.2 (2026-11-11)
 
 - `video_capture_start` and `screen_capture` take `mode`: `raw` (default) or

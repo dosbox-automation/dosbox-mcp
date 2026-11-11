@@ -80,16 +80,15 @@ def register(server, client, add_tool, feature=None):
 
     add_tool(
         name="audio_capture_start",
-        description="Start WAV audio capture of the mixer output.",
+        description=(
+            "Start WAV audio capture of the mixer output, into an "
+            "auto-numbered file in the emulator's capture folder."
+        ),
         read_only=False,
         schema={
             "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Output file path (optional, auto-numbered if omitted)",
-                },
-            },
+            "properties": {},
+            "additionalProperties": False,
         },
         handler=lambda args: _audio_capture_start(client, args),
     )
@@ -170,10 +169,9 @@ def _capture_status(client):
 
 def _audio_capture_start(client, args):
     import mcp.types as types
-    body = {}
-    if args.get("path"):
-        body["path"] = args["path"]
-    result = client.post("/api/v1/capture/audio/start", json=body if body else None)
+    # The engine opens a given path anywhere outside system folders and
+    # truncates it; an agent's recording goes to the capture folder.
+    result = client.post("/api/v1/capture/audio/start", json=None)
     return [types.TextContent(type="text", text=json.dumps(result))]
 
 

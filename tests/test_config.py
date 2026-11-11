@@ -2,17 +2,30 @@
 # License: GPL-2.0-or-later. Contact: dosbox-mcp@trinity2k.net
 #
 
+import logging
 import os
 
 import pytest
 
 from dosbox_mcp.config import (
+    _TOML_KEYS,
     Config,
     ToolProtectedKey,
+    read_token,
     update_config_file,
     validate_base_url,
     write_config_template,
 )
+
+_TOOL_WRITABLE = {"headless", "protocol"}
+_SAMPLE_VALUES = {
+    "binary": "/opt/dosbox/dosbox",
+    "mode": "full",
+    "token_file": "~/.git-credentials",
+    "port": 9000,
+    "headless": True,
+    "protocol": "1.0",
+}
 
 
 @pytest.mark.parametrize("url", [
@@ -185,17 +198,30 @@ class TestUpdateConfigFile:
         with pytest.raises(ValueError, match="unknown"):
             update_config_file(tmp_path / "c.toml", {"prot": "1.0"})
 
-    @pytest.mark.parametrize("key,value", [
-        ("binary", "/some/other/binary"),
-        ("mode", "full"),
-    ])
-    def test_protected_keys_rejected_when_flagged(self, key, value, tmp_path):
-        # bridge_setup path: binary (code execution) and mode (privilege)
-        # must be rejected loudly, not written.
+    def test_every_config_key_has_a_sample_value(self):
+        # A new key fails here until someone decides whether tools may write it.
+        assert set(_SAMPLE_VALUES) == set(_TOML_KEYS)
+
+    @pytest.mark.parametrize("key", sorted(set(_SAMPLE_VALUES) - _TOOL_WRITABLE))
+    def test_only_the_safe_keys_are_tool_writable(self, key, tmp_path):
+        # token_file from a tool made the bridge send any file as its token.
         path = tmp_path / "config.toml"
         with pytest.raises(ToolProtectedKey, match=key):
-            update_config_file(path, {key: value}, tool_facing=True)
+            update_config_file(path, {key: _SAMPLE_VALUES[key]}, tool_facing=True)
         assert not path.exists()
+
+    @pytest.mark.parametrize("pin", ["1.1", "2.0"])
+    def test_a_tool_cannot_pin_a_protocol_the_bridge_lacks(self, pin, tmp_path):
+        path = tmp_path / "config.toml"
+        with pytest.raises(ValueError, match="exceeds"):
+            update_config_file(path, {"protocol": pin}, tool_facing=True)
+        assert not path.exists()
+
+    @pytest.mark.parametrize("key", sorted(_TOOL_WRITABLE))
+    def test_the_safe_keys_stay_tool_writable(self, key, tmp_path):
+        path = tmp_path / "config.toml"
+        update_config_file(path, {key: _SAMPLE_VALUES[key]}, tool_facing=True)
+        assert key in path.read_text(encoding="utf-8")
 
     def test_protected_keys_allowed_for_cli(self, tmp_path):
         # The human-facing CLI may set anything.
@@ -205,6 +231,58 @@ class TestUpdateConfigFile:
         text = path.read_text(encoding="utf-8")
         assert "/opt/dosbox/dosbox" in text
         assert "observe" in text
+
+
+class TestReadToken:
+    _TOKEN = "0123456789abcdef" * 4
+
+    def test_a_token_file_with_a_token_is_read(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("DOSBOX_API_TOKEN", raising=False)
+        path = tmp_path / "api_token"
+        path.write_text(self._TOKEN + "\n", encoding="utf-8")
+        assert read_token(path) == self._TOKEN
+
+    @pytest.mark.parametrize("content", [
+        "https://user:ghp_secretvalue@github.com",
+        "0123456789abcdef" * 4 + "0",
+        "0123456789abcdeg" * 4,
+        "",
+    ])
+    def test_a_file_without_a_token_is_never_used(self, content, tmp_path,
+                                                  monkeypatch, caplog):
+        monkeypatch.delenv("DOSBOX_API_TOKEN", raising=False)
+        path = tmp_path / "not_a_token"
+        path.write_text(content + "\n", encoding="utf-8")
+        with caplog.at_level(logging.WARNING, logger="dosbox_mcp.config"):
+            assert read_token(path) is None
+        assert str(path) in caplog.text
+        if content:
+            assert content not in caplog.text
+
+
+    def test_a_file_that_is_not_utf8_is_never_used(self, tmp_path, monkeypatch, caplog):
+        # Notepad's "Unicode" saves UTF-16; that is a wrong file, not a crash.
+        monkeypatch.delenv("DOSBOX_API_TOKEN", raising=False)
+        path = tmp_path / "api_token"
+        path.write_bytes(("0123456789abcdef" * 4).encode("utf-16"))
+        with caplog.at_level(logging.WARNING, logger="dosbox_mcp.config"):
+            assert read_token(path) is None
+        assert str(path) in caplog.text
+
+
+    @pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0,
+                        reason="needs a file the test user cannot read")
+    def test_an_unreadable_file_is_never_used(self, tmp_path, monkeypatch, caplog):
+        monkeypatch.delenv("DOSBOX_API_TOKEN", raising=False)
+        path = tmp_path / "api_token"
+        path.write_text("0123456789abcdef" * 4, encoding="utf-8")
+        path.chmod(0)
+        try:
+            with caplog.at_level(logging.WARNING, logger="dosbox_mcp.config"):
+                assert read_token(path) is None
+        finally:
+            path.chmod(0o600)
+        assert str(path) in caplog.text
 
 
 class TestConfigTemplate:

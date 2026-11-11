@@ -3,6 +3,7 @@
 #
 
 import ipaddress
+import logging
 import os
 import re
 import tempfile
@@ -14,7 +15,14 @@ from urllib.parse import urlparse
 import tomlkit
 from platformdirs import user_config_dir
 
+from .protocol import BRIDGE_PROTOCOL, parse_version
+
+logger = logging.getLogger(__name__)
+
 _LOOPBACK_NAMES = {"localhost"}
+
+# The engine accepts exactly this (webserver/private/auth.h IsValidHexToken).
+_TOKEN_RE = re.compile(r"[0-9A-Fa-f]{64}")
 
 MODES = ("observe", "interact", "full")
 
@@ -65,8 +73,17 @@ def read_token(token_file: Path | None = None) -> str | None:
     if env:
         return env
     path = token_file if token_file is not None else default_token_path()
-    if path.is_file():
-        return path.read_text(encoding="utf-8").strip()
+    if not path.is_file():
+        return None
+    try:
+        token = path.read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeDecodeError) as e:
+        logger.warning("cannot read the token file %s, not using it: %s",
+                       path, type(e).__name__)
+        return None
+    if _TOKEN_RE.fullmatch(token):
+        return token
+    logger.warning("%s holds no dosbox-automation API token, not using it", path)
     return None
 
 
@@ -183,11 +200,10 @@ class ToolProtectedKey(ValueError):
     for the human-edited config."""
 
 
-# binary: whoever sets it decides what code the bridge executes.
-# mode: the operator's constraint on the agent - an agent that can raise
-# it escalates its own privileges. Both are human-only (self-audit
-# 2026-07-17).
-_TOOL_PROTECTED_KEYS = frozenset({"binary", "mode"})
+# Binary decides what code runs, mode sets the agent's own privileges, and
+# token_file and port decide where the bridge sends its token, so tools may
+# write only the keys named here.
+_TOOL_WRITABLE_KEYS = frozenset({"headless", "protocol"})
 
 _CONFIG_TEMPLATE = """\
 # dosbox-mcp configuration
@@ -233,6 +249,12 @@ def _atomic_write(path: Path, text: str) -> None:
     os.replace(tmp.name, path)
 
 
+def _pin_within_bridge(pin: str) -> bool:
+    pinned = parse_version(pin)
+    bridge = parse_version(BRIDGE_PROTOCOL)
+    return pinned[0] == bridge[0] and pinned[1] <= bridge[1]
+
+
 def update_config_file(path: Path, changes: dict,
                        tool_facing: bool = False) -> None:
     """Apply validated changes to the config file, preserving the
@@ -247,12 +269,17 @@ def update_config_file(path: Path, changes: dict,
     if unknown:
         raise ValueError(f"unknown key(s): {', '.join(unknown)}")
     if tool_facing:
-        protected = sorted(set(changes) & _TOOL_PROTECTED_KEYS)
+        protected = sorted(set(changes) - _TOOL_WRITABLE_KEYS)
         if protected:
             raise ToolProtectedKey(
                 f"key(s) {', '.join(protected)} are set in the human-edited "
                 "config file only - not writable through a tool"
             )
+        if "protocol" in changes:
+            _validate_protocol(changes["protocol"])
+            _require(_pin_within_bridge(changes["protocol"]),
+                     f"protocol pin {changes['protocol']!r} exceeds what this "
+                     f"bridge implements ({BRIDGE_PROTOCOL})")
     for key, value in changes.items():
         _TOML_KEYS[key](value)
 

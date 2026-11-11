@@ -9,3 +9,5 @@ build/
 .sessions/
 .claude/*
 !.claude/skills/
+# the plugin ships its server config; a global ignore of .mcp.json would drop it
+!claude-plugin/.mcp.json

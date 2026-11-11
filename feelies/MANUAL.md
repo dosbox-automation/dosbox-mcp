@@ -54,9 +54,10 @@ you choose what the agent may do at all.
 
 Tools outside the mode are not hidden behind errors - they are not
 registered at all, so the agent never sees them. The mode lives in the
-human-edited config file only; no tool can change it. Same for the
-`binary` path the bridge may spawn. Those two rules are load-bearing
-security decisions, not conveniences.
+human-edited config file only; no tool can change it. The same holds
+for the `binary` path the bridge may spawn, the token file and the
+port, which decide what code runs and where the token goes. These
+rules are security decisions, not conveniences.
 
 ## Configuration
 

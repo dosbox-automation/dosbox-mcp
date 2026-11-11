@@ -22,6 +22,7 @@ from dosbox_mcp.tools.bridge import (
     _swagger,
     _version,
 )
+from tests.wire import over_the_wire, wire_server
 
 
 class FakeConn:
@@ -182,15 +183,16 @@ class TestSetup:
     def test_setup_writes_safe_keys(self, tmp_path, monkeypatch):
         path = tmp_path / "config.toml"
         monkeypatch.setenv("DOSBOX_MCP_CONFIG", str(path))
-        text = _text(_setup({"port": 9000, "headless": True}))
+        text = _text(_setup({"headless": True, "protocol": "1.0"}))
         assert "saved" in text.lower()
         content = path.read_text(encoding="utf-8")
-        assert "port = 9000" in content
+        assert 'protocol = "1.0"' in content
         assert "headless = true" in content
 
     @pytest.mark.parametrize("args", [
         {"binary": "/some/other/binary"},
         {"mode": "full"},
+        {"port": 6000},
     ])
     def test_setup_rejects_protected_keys(self, args, tmp_path, monkeypatch):
         path = tmp_path / "config.toml"
@@ -201,8 +203,28 @@ class TestSetup:
 
     def test_setup_rejects_bad_values(self, tmp_path, monkeypatch):
         monkeypatch.setenv("DOSBOX_MCP_CONFIG", str(tmp_path / "c.toml"))
-        text = _text(_setup({"port": 99999}))
-        assert "out of range" in text
+        text = _text(_setup({"protocol": "one"}))
+        assert "major.minor" in text
+
+    def test_setup_refuses_the_token_file(self, tmp_path, monkeypatch):
+        path = tmp_path / "config.toml"
+        monkeypatch.setenv("DOSBOX_MCP_CONFIG", str(path))
+        text = _text(_setup({"token_file": "~/.git-credentials"}))
+        assert "human-edited" in text
+        assert not path.exists()
+
+    def test_setup_schema_refuses_keys_beyond_the_safe_two(self, tmp_path,
+                                                            monkeypatch, wire_mode):
+        path = tmp_path / "config.toml"
+        monkeypatch.setenv("DOSBOX_MCP_CONFIG", str(path))
+        result = over_the_wire(
+            wire_server(),
+            lambda c: c.call_tool("bridge_setup", {"token_file": "~/.git-credentials",
+                                                   "port": 22}),
+            wire_mode)
+        assert result.is_error is True
+        assert result.content[0].text.startswith("Input validation error")
+        assert not path.exists()
 
 
 class TestSwagger:

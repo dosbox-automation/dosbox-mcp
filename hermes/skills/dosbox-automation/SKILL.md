@@ -20,7 +20,7 @@ License: GPL-2.0-or-later. Contact: dosbox-mcp@trinity2k.net
   the folders DOS may mount. Without the last line MOUNT refuses every path.
 - The emulator must be running. `bridge_status` says whether the tools
   reach it. On Windows and macOS, or with `XDG_CONFIG_HOME` set, the user
-  points the bridge at the token once: `uvx dosbox-mcp==0.2.2 setup
+  points the bridge at the token once: `uvx dosbox-mcp==0.2.3 setup
   --token-file <emulator config folder>/webserver/api_token`.
 - The API listens on loopback only; every call except the version probe
   needs the token.

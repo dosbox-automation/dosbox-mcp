@@ -25,9 +25,9 @@ These work whether or not an engine is connected.
   only attached to). `{}`
 - **bridge_logs** (read-only) - tail the spawned instance's output.
   `{"n": 50}`
-- **bridge_setup** - change safe settings (port, headless, protocol).
-  Binary path and mode are human-edited only.
-  `{"port": 8386, "headless": true}`
+- **bridge_setup** - change safe settings (headless, protocol).
+  You set the binary path, mode, token file and port in the config file.
+  `{"headless": true}`
 - **bridge_swagger** (read-only) - digest of the engine's OpenAPI
   surface: route counts and anything unknown to the protocol. `{}`
 
@@ -105,8 +105,8 @@ These work whether or not an engine is connected.
 
 ## Audio
 
-- **audio_capture_start** - start WAV audio capture.
-  `{}` or `{"path": "/tmp/out.wav"}`
+- **audio_capture_start** - start WAV audio capture into an
+  auto-numbered file in the emulator's capture folder. `{}`
 - **audio_capture_stop** - stop audio capture. `{}`
 - **audio_capture_status** (read-only) - audio capture state. `{}`
 

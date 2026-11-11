@@ -84,7 +84,7 @@ def _session_info(client):
         info["token"] = "absent"  # nosec B105 - status word, not a secret
         info["note"] = (
             "No token available yet: DOSBOX_API_TOKEN is unset and the "
-            "token file does not exist. Start dosbox with "
-            "webserver_token_file=true, or export the env var."
+            "token file is missing or holds no API token (64 hex digits). "
+            "Start dosbox with webserver_token_file=true, or export the env var."
         )
     return [types.TextContent(type="text", text=json.dumps(info, indent=2))]

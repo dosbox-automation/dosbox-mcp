@@ -18,6 +18,10 @@ not running the way it needs to be.
 4. Are you looking in the right place? The bridge reads
    `~/.config/dosbox-automation/webserver/api_token` unless you set
    `token_file` in the bridge config or the `DOSBOX_API_TOKEN` env var.
+5. Does the file hold a token? The bridge uses the token file only when
+   it holds 64 hex digits; otherwise it logs a warning that names the
+   file. You see this when the bridge points at the wrong file or a
+   stale copy, or when an editor saved the file with a byte order mark.
 
 If the engine has the hello route, `bridge_connect` tells you which of
 these it is: it can see the engine is there and report that only the
