@@ -6,11 +6,12 @@ MCP server for [dosbox-automation](https://dosbox-automation.org):
 drive a DOS machine from an AI agent.
 
 [dosbox-automation](https://github.com/dosbox-automation/dosbox-automation)
-is a DOSBox fork with a built-in REST API for automation. This bridge
-connects any MCP-capable agent (Claude Code, Claude Desktop, or anything
-that speaks the Model Context Protocol) to a running emulator. The agent
-can type into DOS programs, read the screen, capture frames and video,
-run sandboxed Lua scripts, and inspect memory.
+is a DOS emulator with a built-in REST API for automation. It began as
+a fork of dosbox-staging and has been developed independently since
+version 0.85.0. This bridge connects any MCP-capable agent (Claude Code,
+Claude Desktop, or anything that speaks the Model Context Protocol) to a
+running emulator. The agent can type into DOS programs, read the screen,
+capture frames and video, run sandboxed Lua scripts, and inspect memory.
 
 ## Getting started
 
