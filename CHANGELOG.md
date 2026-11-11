@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.4 (2026-11-11)
+
+- Every tool carries a title, readOnlyHint, destructiveHint and
+  openWorldHint.
+- The bundled skill points to no outside guide and prefers screen text
+  over screenshots.
+- The bridge ignores HTTP proxy settings from the environment.
+- `port_read` is no longer offered as read-only.
+- `session_info` describes itself for users who want the REST API directly.
+
 ## 0.2.3 (2026-11-11)
 
 - `bridge_setup` changes only headless and protocol.

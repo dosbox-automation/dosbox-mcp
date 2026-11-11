@@ -32,12 +32,12 @@ def register(server, client, add_tool, feature=None):
     add_tool(
         name="session_info",
         description=(
-            "Connection details for driving the REST API directly: base "
-            "URL, token location, and a curl example that reads the token "
-            "from its file. Use this when you need an endpoint the MCP "
-            "tools don't wrap, such as saving a video frame to a file. "
-            "The token value itself is never returned - it stays out of "
-            "transcripts by design."
+            "Connection details for the emulator's REST API: base URL, "
+            "token location, and a curl example that reads the token from "
+            "its file. Use this when the user asks how to call the API "
+            "directly; for the work itself, use the MCP tools. The token "
+            "value itself is never returned - it stays out of transcripts "
+            "by design."
         ),
         read_only=True,
         schema={"type": "object", "properties": {}},

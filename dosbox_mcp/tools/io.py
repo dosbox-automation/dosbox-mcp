@@ -10,9 +10,11 @@ def register(server, client, add_tool, feature=None):
         name="port_read",
         description=(
             "Read an x86 I/O port. Width is 1 (byte) or 2 (word). "
-            "Use for VGA registers, sound cards, HGC control ports."
+            "Use for VGA registers, sound cards, HGC control ports. The read "
+            "goes through the device, as the CPU's would: reading port 60h "
+            "takes a key from the keyboard buffer."
         ),
-        read_only=True,
+        read_only=False,
         schema={
             "type": "object",
             "properties": {

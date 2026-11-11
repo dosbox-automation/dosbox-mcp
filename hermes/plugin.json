@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "dosbox-mcp",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Drive a DOS machine from the agent through dosbox-automation's own MCP bridge: type and press keys, read the screen, take screenshots, record video and audio, run Lua scripts inside the emulator, read and write memory.",
   "author": {
     "name": "dosbox-automation",

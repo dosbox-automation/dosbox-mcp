@@ -3,7 +3,7 @@
   "name": "io.github.dosbox-automation/dosbox-mcp",
   "title": "dosbox-mcp",
   "description": "Drive a DOS machine in dosbox-automation: keys, screen, recordings, Lua, memory.",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "websiteUrl": "https://dosbox-automation.org",
   "repository": {
     "url": "https://github.com/dosbox-automation/dosbox-mcp",
@@ -13,7 +13,7 @@
     {
       "registryType": "pypi",
       "identifier": "dosbox-mcp",
-      "version": "0.2.3",
+      "version": "0.2.4",
       "transport": {
         "type": "stdio"
       }

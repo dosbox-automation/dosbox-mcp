@@ -10,6 +10,7 @@ import mcp.server.stdio
 from mcp.server.lowlevel import Server
 import mcp.types as types
 
+from .annotations import TOOL_ANNOTATIONS
 from .config import MODES, Config
 from .connection import Connection, guard
 from .lifecycle import InstanceManager
@@ -105,7 +106,15 @@ def build_server(conn, mode: str = "full", manager=None):
         # must work while disconnected - that is their point.
         wrapped = (guard(conn, handler, feature=feature)
                    if needs_connection else handler)
-        annotations = types.ToolAnnotations(readOnlyHint=read_only)
+        if name not in TOOL_ANNOTATIONS:
+            raise ValueError(f"tool {name}: no entry in annotations.TOOL_ANNOTATIONS")
+        title, destructive = TOOL_ANNOTATIONS[name]
+        annotations = types.ToolAnnotations(
+            title=title,
+            readOnlyHint=read_only,
+            destructiveHint=destructive and not read_only,
+            openWorldHint=False,
+        )
         registry[name] = (
             types.Tool(
                 name=name,

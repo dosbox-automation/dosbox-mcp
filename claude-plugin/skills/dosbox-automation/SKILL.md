@@ -20,7 +20,7 @@ License: GPL-2.0-or-later. Contact: dosbox-mcp@trinity2k.net
   the folders DOS may mount. Without the last line MOUNT refuses every path.
 - The emulator must be running. `bridge_status` says whether the tools
   reach it. On Windows and macOS, or with `XDG_CONFIG_HOME` set, the user
-  points the bridge at the token once: `uvx dosbox-mcp==0.2.3 setup
+  points the bridge at the token once: `uvx dosbox-mcp==0.2.4 setup
   --token-file <emulator config folder>/webserver/api_token`.
 - The API listens on loopback only; every call except the version probe
   needs the token.
@@ -41,11 +41,13 @@ License: GPL-2.0-or-later. Contact: dosbox-mcp@trinity2k.net
 
 - After each input, read the screen before the next step. DOS programs
   react to timing; check the result, do not assume it.
-- In graphics modes `screen_text` has nothing: use `screen_capture`.
+- Prefer `screen_text`: it returns the screen as a few lines of text and
+  costs far fewer tokens than a screenshot. Use `screen_capture` only in
+  graphics modes, where `screen_text` has nothing.
 - Mount folders with `MOUNT C <folder>` typed at the prompt; only folders
   under `mount_allowed_bases` work.
 - Never kill the emulator by name: other sessions on the machine may run
   one. `dosbox_shutdown` ends it cleanly.
-
-The full guide for agents ships with the emulator: `AGENTS.md` and
-`docs/agents/` in the release package.
+- An emulator you started with `bridge_start` ends with `bridge_stop`: that
+  also removes its temporary folder. Recordings made there go with it,
+  so tell the user before you stop it.

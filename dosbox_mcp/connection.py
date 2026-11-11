@@ -82,7 +82,7 @@ class Connection:
         """Unauthenticated hello probe: (something listens, hello payload
         or None when the engine predates the route)."""
         try:
-            with httpx.Client(transport=self._transport, timeout=5.0) as probe:
+            with httpx.Client(transport=self._transport, timeout=5.0, trust_env=False) as probe:
                 resp = probe.get(self._config.base_url.rstrip("/") + HELLO_PATH)
         except httpx.HTTPError:
             return False, None

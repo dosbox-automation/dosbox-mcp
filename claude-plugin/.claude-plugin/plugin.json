@@ -1,7 +1,7 @@
 {
   "name": "dosbox-mcp",
   "displayName": "dosbox-mcp",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Drive a DOS machine in the dosbox-automation emulator: type and press keys, read the screen, take screenshots, record video and audio, run Lua scripts inside the emulator, read and write its memory.",
   "author": {
     "name": "dosbox-automation",
@@ -11,10 +11,11 @@
   "repository": "https://github.com/dosbox-automation/dosbox-mcp",
   "documentationUrl": "https://github.com/dosbox-automation/dosbox-mcp/tree/main/claude-plugin#readme",
   "supportUrl": "https://github.com/dosbox-automation/dosbox-mcp/issues",
+  "privacyPolicyUrl": "https://github.com/dosbox-automation/dosbox-mcp/blob/main/claude-plugin/PRIVACY.md",
   "license": "GPL-2.0-or-later",
   "keywords": [
     "dos", "msdos", "dosbox", "emulator", "retro", "retrogaming", "games",
-    "gaming", "mcp", "automation", "debugging", "remote control", "remote",
-    "recording", "deployment", "testing", "unit testing", "development"
+    "gaming", "mcp", "automation", "debugging", "recording", "deployment",
+    "testing", "unit testing", "development"
   ]
 }

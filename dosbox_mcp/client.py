@@ -43,6 +43,8 @@ class DosboxClient:
             },
             transport=transport,
             timeout=30.0,
+            # Loopback only: a proxy from the environment would receive the token.
+            trust_env=False,
         )
         # The pauses block the calling thread; the stdio server answers nothing meanwhile.
         self.busy_deadline_s = 30.0

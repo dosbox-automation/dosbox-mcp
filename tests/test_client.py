@@ -195,3 +195,81 @@ def test_every_method_is_sent_again_unchanged(send):
     assert calls[0].method == calls[1].method
     assert calls[0].content == calls[1].content
     assert calls[0].headers.get("content-type") == calls[1].headers.get("content-type")
+
+
+def _listener(handler_cls=None):
+    """A loopback server on a free port: an HTTP server, or a bare socket that counts connections."""
+    import http.server
+    import socket
+    import threading
+    if handler_cls is None:
+        sock = socket.socket()
+        sock.bind(("127.0.0.1", 0))
+        sock.listen(4)
+        hits = []
+
+        def accept():
+            while True:
+                try:
+                    conn, _ = sock.accept()
+                except OSError:
+                    return
+                hits.append(1)
+                conn.close()
+        threading.Thread(target=accept, daemon=True).start()
+        return sock.getsockname()[1], hits, sock.close
+    server = http.server.HTTPServer(("127.0.0.1", 0), handler_cls)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+
+    def stop():
+        server.shutdown()
+        server.server_close()
+    return server.server_address[1], None, stop
+
+
+def test_an_http_proxy_in_the_environment_never_sees_the_token(monkeypatch):
+    # The bridge talks to loopback only; a proxy variable must not reroute it.
+    import http.server
+    import json as _json
+
+    class Engine(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            body = _json.dumps({"ok": True}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    proxy_port, proxy_hits, stop_proxy = _listener()
+    engine_port, _, stop_engine = _listener(Engine)
+    try:
+        for var in ("HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy"):
+            monkeypatch.setenv(var, f"http://127.0.0.1:{proxy_port}")
+        for var in ("NO_PROXY", "no_proxy"):
+            monkeypatch.delenv(var, raising=False)
+        client = DosboxClient(f"http://127.0.0.1:{engine_port}", "a" * 64)
+        assert client.get("/api/v1/status") == {"ok": True}
+        assert proxy_hits == []
+    finally:
+        stop_proxy()
+        stop_engine()
+
+
+def test_the_hello_probe_ignores_an_http_proxy_too(monkeypatch):
+    from dosbox_mcp.config import Config
+    from dosbox_mcp.connection import Connection
+
+    proxy_port, proxy_hits, stop_proxy = _listener()
+    try:
+        for var in ("HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy"):
+            monkeypatch.setenv(var, f"http://127.0.0.1:{proxy_port}")
+        for var in ("NO_PROXY", "no_proxy"):
+            monkeypatch.delenv(var, raising=False)
+        Connection(Config(base_url="http://127.0.0.1:9", token=None)).probe_hello()
+        assert proxy_hits == []
+    finally:
+        stop_proxy()

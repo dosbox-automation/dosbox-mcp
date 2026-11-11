@@ -77,7 +77,8 @@ These work whether or not an engine is connected.
 
 - **cpu_write_register** - write a CPU register (feature: cpu_control).
   `{"register": "eax", "value": 0}`
-- **port_read** (read-only) - read an x86 I/O port (feature: port_io).
+- **port_read** - read an x86 I/O port (feature: port_io). The read goes
+  through the device: reading port 60h takes a key from the keyboard buffer.
   `{"port": 968, "width": 1}`
 - **port_write** - write an x86 I/O port (feature: port_io).
   `{"port": 968, "value": 1, "width": 1}`

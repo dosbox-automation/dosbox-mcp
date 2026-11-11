@@ -28,8 +28,8 @@ local servers.
   [releases page](https://github.com/dosbox-automation/dosbox-automation/releases).
 - **uv** must be on your PATH, because the plugin starts the bridge with
   `uvx`. The bridge itself comes with the plugin, in
-  `vendor/dosbox_mcp-0.2.3-py3-none-any.whl`, the same file as dosbox-mcp
-  0.2.3 on PyPI.
+  `vendor/dosbox_mcp-0.2.4-py3-none-any.whl`, the same file as dosbox-mcp
+  0.2.4 on PyPI.
 - The emulator's primary config needs these lines in its `[webserver]`
   section:
 
@@ -47,7 +47,7 @@ itself. On Windows and macOS, or with `XDG_CONFIG_HOME` set, tell it once
 where the emulator keeps it:
 
 ```
-uvx dosbox-mcp==0.2.3 setup --token-file <emulator config folder>/webserver/api_token
+uvx dosbox-mcp==0.2.4 setup --token-file <emulator config folder>/webserver/api_token
 ```
 
 This writes the path into the bridge's own config file, so it works
@@ -55,9 +55,26 @@ however Claude starts the bridge.
 
 ## Use it
 
-Start the emulator, then ask Claude to run a program, type a command,
-read what is on the screen, record a session or find a value in a game's
-memory. The skill tells Claude which tools to use and in what order.
+Start the emulator, then ask Claude to run a program, type a command, read
+what is on the screen, record a session or find a value in a game's memory.
+The skill tells Claude which tools to use and in what order.
+
+These three requests need no other software: they run at the emulator's
+own Z:\> prompt, so they also serve as a test setup.
+
+- "Run DIR Z: and tell me which programs are on drive Z:."
+- "Record a short video while you type VER at the DOS prompt, then stop the
+  recording and tell me whether it ended cleanly."
+- "Read the BIOS keyboard flags at 0040:0017 and tell me whether Num Lock
+  is on."
+
+Claude reads the screen as text whenever the program runs in a text mode,
+which costs far fewer tokens than a screenshot. Video and audio capture
+records the emulator's own output, what the DOS program draws and plays;
+dosbox-mcp contains no generative model and creates no media of its own.
+
+If something does not work, the troubleshooting sheet is at
+https://github.com/dosbox-automation/dosbox-mcp/blob/main/feelies/TECH-SUPPORT.md.
 
 ## What it does on your machine
 
@@ -65,11 +82,11 @@ memory. The skill tells Claude which tools to use and in what order.
   wheel in the plugin's `vendor/` folder and checks PyPI for the bridge's
   Python dependencies; the first start downloads them, later starts use uv's
   cache. If `uvx` finds no Python 3.11 or newer, it downloads an interpreter
-  as well. The `setup` command above, which you run yourself, fetches the
-  same dosbox-mcp 0.2.3 from PyPI. The bridge process itself talks only to
-  the emulator, on loopback addresses.
+  from GitHub (python-build-standalone). The `setup` command above, which
+  you run yourself, fetches the same dosbox-mcp 0.2.4 from PyPI. The bridge
+  process itself talks only to the emulator, on loopback addresses.
 - **Files it reads:** The bridge reads the emulator's API token file and its
-  own config file; `uvx dosbox-mcp==0.2.3 setup` without options prints
+  own config file; `uvx dosbox-mcp==0.2.4 setup` without options prints
   where the config file is. The bridge uses the token file only when it
   holds an API token of 64 hex digits, and it sends that token only to the
   emulator address in its config.
@@ -80,7 +97,11 @@ memory. The skill tells Claude which tools to use and in what order.
   `setup` or when Claude calls the `bridge_setup` tool. That tool can change
   only the window setting and the protocol pin; you set the emulator binary,
   the capability mode, the token file and the port yourself. `bridge_start`
-  writes a temporary config folder for the emulator it starts.
+  writes a temporary config folder for the emulator it starts; that emulator
+  keeps its API token and its recordings there. `bridge_stop` deletes the
+  folder with everything in it, so copy recordings out first. If the
+  emulator ends any other way, the folder stays in your temporary folder
+  until you delete it.
 - **Processes:** The bridge runs while Claude uses it. It starts an emulator
   only when you named one in its config (`setup --binary`). That emulator
   runs on its own empty config, so MOUNT finds no allowed folder there; for

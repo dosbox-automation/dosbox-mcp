@@ -300,6 +300,8 @@ def _inject_tool(monkeypatch, schema, handler):
             handler=handler, needs_connection=False)
     monkeypatch.setattr("dosbox_mcp.server.script",
                         types.SimpleNamespace(register=register))
+    from dosbox_mcp.annotations import TOOL_ANNOTATIONS
+    monkeypatch.setitem(TOOL_ANNOTATIONS, "injected", ("Injected", False))
 
 
 def test_tools_list_serves_exactly_the_registered_tools(wire_mode):
@@ -378,3 +380,54 @@ def test_server_reports_its_own_version(wire_mode):
         return client.server_info
     info = over_the_wire(wire_server(), server_info, wire_mode)
     assert info.version == version("dosbox-mcp")
+
+
+def _listed_tools(wire_mode):
+    return over_the_wire(wire_server(), lambda c: c.list_tools(), wire_mode).tools
+
+
+def test_every_tool_carries_the_directory_annotations(wire_mode):
+    # Anthropic's directory policy 5E.
+    missing = []
+    for tool in _listed_tools(wire_mode):
+        a = tool.annotations
+        if a is None or not a.title or not isinstance(a.read_only_hint, bool) \
+                or not isinstance(a.destructive_hint, bool) or a.open_world_hint is not False:
+            missing.append(tool.name)
+    assert missing == []
+
+
+def test_the_table_marks_no_read_only_tool_destructive(wire_mode):
+    from dosbox_mcp.annotations import TOOL_ANNOTATIONS
+    flagged = [t.name for t in _listed_tools(wire_mode)
+               if t.annotations.read_only_hint and TOOL_ANNOTATIONS[t.name][1]]
+    assert flagged == []
+
+
+def test_a_tool_without_annotations_refuses_to_register(monkeypatch):
+    def register(server, conn, add):
+        add(name="unlisted", description="Unlisted.",
+            schema={"type": "object", "properties": {}},
+            handler=lambda args: [], needs_connection=False)
+    monkeypatch.setattr("dosbox_mcp.server.script",
+                        types.SimpleNamespace(register=register))
+    with pytest.raises(ValueError, match="unlisted"):
+        _build("full")
+
+
+def test_port_read_is_not_offered_as_read_only():
+    # The engine reads through the device handlers; reading port 60h takes a key.
+    assert "port_read" not in _build("observe").registered_tool_names()
+
+
+@pytest.mark.parametrize("name", ["mem_write", "dosbox_shutdown", "script_run",
+                                  "input_type", "cpu_write_register", "port_write",
+                                  "port_read"])
+def test_tools_that_change_the_machine_are_destructive(name, wire_mode):
+    tool = next(t for t in _listed_tools(wire_mode) if t.name == name)
+    assert tool.annotations.destructive_hint is True
+
+
+def test_every_annotation_entry_names_a_registered_tool():
+    from dosbox_mcp.annotations import TOOL_ANNOTATIONS
+    assert set(TOOL_ANNOTATIONS) == _build("full").registered_tool_names()
