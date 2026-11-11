@@ -1,0 +1,13 @@
+dosbox-mcp Licensing Notice
+---------------------------
+
+dosbox-mcp is licensed under the GNU General Public License
+version 2 or later (GPL-2.0-or-later).
+
+The full license text is in LICENSE.
+
+Third-party dependencies are listed in THIRD_PARTY_LICENSES.txt.
+
+Exception: PROTOCOL.md (the dosbox-mcp protocol specification) is
+licensed under Creative Commons Attribution-ShareAlike 4.0
+(CC-BY-SA-4.0). The full license text is in licenses/CC-BY-SA-4.0.txt.
